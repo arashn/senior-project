@@ -1,2 +1,2 @@
-# senior-project
-UCI CSE 181/EECS 159 Senior Project 2015-16
+# Senior Design Project
+This is a repo to store all project code, documentation, diagrams, schematics, and other related files.
