@@ -1,0 +1,107 @@
+#include <Servo.h>
+Servo bldc_Aileron;
+Servo bldc_Elevator;
+Servo bldc_Throttle;
+Servo bldc_Rudder;
+Servo bldc_Aux;
+
+#define AILERON  0
+#define ELEVATOR 1
+#define THROTTLE 2
+#define RUDDER   3
+#define AUX      4
+
+
+#define AI_PIN 5
+#define EL_PIN 6
+#define TH_PIN 9
+#define TD_PIN 10
+#define AUX_PIN 11
+
+char *servo_keys[] = {"AI", "EL0", "TH", "RD", "AUX"};
+Servo *servos[] = {&bldc_Aileron, &bldc_Elevator, &bldc_Throttle, &bldc_Rudder, &bldc_Aux};
+char *servo_names[] = {"Ailerons", "Elevator", "Throttle", "Rudder", "Auxiliary"};
+
+#define SERVO_MIN 1100
+#define SERVO_MID 1500
+#define SERVO_MAX 1900
+
+#define SERVO_AI_IDLE SERVO_MID
+#define SERVO_EL_IDLE SERVO_MID
+#define SERVO_TH_IDLE SERVO_MID
+#define SERVO_TH_FULL 2390
+#define SERVO_RD_IDLE SERVO_MID
+
+#define SERVO_AUX_ON 2018
+#define SERVO_AUX_OFF 1015
+
+String string= "";
+
+void setup() {
+  pinMode(AI_PIN, OUTPUT);
+  pinMode(EL_PIN, OUTPUT);
+  pinMode(TH_PIN, OUTPUT);
+  pinMode(TD_PIN, OUTPUT);
+  pinMode(AUX_PIN, OUTPUT);
+  
+  bldc_Aileron.attach(AI_PIN);
+  bldc_Elevator.attach(EL_PIN);
+  bldc_Throttle.attach(TH_PIN);//A2);
+  bldc_Rudder.attach(TD_PIN);
+  bldc_Aux.attach(AUX_PIN);
+
+  Serial.begin(9600);
+  delay(100);
+  initializePulse();
+  
+  Serial.println("System Ready");
+}
+
+void loop() {
+
+}
+
+void armModel(){
+  bldc_Rudder.writeMicroseconds(SERVO_MIN);
+  delay(2000);
+  bldc_Rudder.writeMicroseconds(SERVO_RD_IDLE);
+  
+  Serial.println("Model Armed and Ready to Fly");
+  delay(1000);
+}
+
+void disarmModel(){
+  bldc_Rudder.writeMicroseconds(SERVO_MAX);
+  delay(2000);
+  bldc_Rudder.writeMicroseconds(SERVO_RD_IDLE);
+  
+  Serial.println("Model Disarmed");
+  delay(1000);
+}
+
+void initializePulse() {
+  bldc_Aileron.writeMicroseconds(SERVO_RD_IDLE);
+  delay(10);
+  bldc_Elevator.writeMicroseconds(SERVO_EL_IDLE);
+  delay(10);
+  bldc_Throttle.writeMicroseconds(SERVO_TH_IDLE);
+  delay(10);
+  bldc_Rudder.writeMicroseconds(SERVO_RD_IDLE);
+  delay(10);
+  auxiliary(true);
+  delay(10);
+  Serial.println("Pulse Initialized");
+}
+
+void fullThrottle() {
+  bldc_Throttle.writeMicroseconds(SERVO_TH_FULL);
+}
+
+void idleThrottle() {
+  bldc_Throttle.writeMicroseconds(SERVO_TH_IDLE);
+}
+
+
+void auxiliary(bool on) {
+  bldc_Aux.writeMicroseconds(on ? SERVO_AUX_ON : SERVO_AUX_OFF);
+}
