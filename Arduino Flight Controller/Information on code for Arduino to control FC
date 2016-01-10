@@ -1,0 +1,16 @@
+
+This youtube video helps explain how the servo library works which converts adruino commands into FC commands.
+
+https://www.youtube.com/watch?v=DHDOAocEpqU
+
+This is the original code I worked from however is DOES NOT COMPILE.  I made changes such as changing where brackets are and 
+renaming varialbes to make it compile.
+https://github.com/wazari972/Multicopter/blob/master/Arduino_2_KK2/KK2Control.ino
+
+This code claims they code their code from the youtube link below, but I downloaded the code from the same youtube video and there
+were many function definitions missing and many changes to shared code.
+
+This youtube video helps explain how the above code's serial motinor interface functions.
+
+https://www.youtube.com/watch?v=AxddSvbn21c
+
