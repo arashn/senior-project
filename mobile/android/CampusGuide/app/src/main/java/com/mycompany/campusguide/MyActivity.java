@@ -1,5 +1,10 @@
 package com.mycompany.campusguide;
 
+import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -29,6 +34,25 @@ import java.util.concurrent.ExecutionException;
 public class MyActivity extends AppCompatActivity
         implements ConnectionCallbacks, OnConnectionFailedListener {
     private GoogleApiClient mGoogleApiClient;
+    private BluetoothAdapter mBluetoothAdapter;
+    public static final int REQUEST_ENABLE_BT = 2;
+
+    // Create a BroadcastReceiver for ACTION_STATE_CHANGED
+    // Turns Bluetooth on if it was turned off
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if(BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
+                if (state == BluetoothAdapter.STATE_OFF) {
+                    System.out.println("Bluetooth was turned off. Turning on...");
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                }
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +70,20 @@ public class MyActivity extends AppCompatActivity
             }
         });
 
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            // Device does not support Bluetooth
+            System.out.println("Device does not support Bluetooth");
+        }
+        else if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+
+        // Register the BroadcastReceiver
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
+
         // Create an instance of GoogleAPIClient
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -54,6 +92,12 @@ public class MyActivity extends AppCompatActivity
                     .addApi(LocationServices.API)
                     .build();
         }
+    }
+
+    public void onDestroy() {
+        // Unregister BroadcastReceiver
+        unregisterReceiver(mReceiver);
+        super.onDestroy();
     }
 
     @Override
@@ -106,6 +150,7 @@ public class MyActivity extends AppCompatActivity
     /** Called when the user clicks the Request button */
     public void sendRequest(View view) {
         String location = ""; // String to store phone's coordinates
+        String userData = "";
         // Check for permission to access device's fine location
         int permissionCheck = ContextCompat.checkSelfPermission(this, "android.permission.ACCESS_FINE_LOCATION");
         if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
@@ -125,14 +170,19 @@ public class MyActivity extends AppCompatActivity
             System.out.println("Permission denied");
         }
 
+        // Get the Bluetooth address for this device
+        String btAddr = mBluetoothAdapter.getAddress();
+        System.out.println(btAddr);
+        userData = btAddr + ";" + location;
+
         // Create a worker thread to create a socket connected to the server
-        // Get the socket's output stream, and write the phone's current location
-        // to the output stream, in a string of the form "latitude, longitude"
+        // Get the socket's output stream, and write the phone's Blueooth address
+        // and the current location, separated by a semicolon
         try {
             AsyncTask<Void, Void, Socket> socketConnection = new ServerConnection().execute();
             Socket sock = socketConnection.get();
             OutputStream socketOutput = sock.getOutputStream();
-            socketOutput.write(location.getBytes());
+            socketOutput.write(userData.getBytes());
         }
         catch (IOException e) {
             System.err.println("An error occurred");
