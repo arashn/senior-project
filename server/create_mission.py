@@ -1,30 +1,13 @@
-import SocketServer
+# This is a script to create a mission from a start
+# location to an end location and upload the mission
+# to the vehicle. The script uses the Google Maps
+# Directions API to obtain directions from the start
+# location to the end location, and uses the points
+# received as waypoints in the mission.
 import googlemaps
 from polyline.codec import PolylineCodec
 from dronekit import connect, VehicleMode, Command
 from pymavlink import mavutil
-
-class MyTCPHandler(SocketServer.BaseRequestHandler):
-    """
-    The request handler class for our server.
-
-    It is instantiated once per connection to the server, and must
-    override the handle() method to implement communication to the
-    client.
-    """
-
-    def handle(self):
-        # self.request is the TCP socket connected to the client
-        self.data = self.request.recv(1024).strip()
-        print "{} wrote:".format(self.client_address[0])
-        print self.data
-        locations = self.data.split(';')
-        start_location = locations[0]
-        end_location = locations[1]
-        directions = get_directions(start_location, end_location)
-        create_mission(directions)
-        # just send back the same data, but upper-cased
-        self.request.sendall("Guide is on the way")
 
 gmaps = googlemaps.Client(key='AIzaSyBj8RNUHUSuk78N2Jim9yrMAKjWvh6gc_g')
 vehicle = connect('/dev/ttyUSB0', baud=57600, wait_ready=True)
@@ -65,13 +48,7 @@ def create_mission(directions):
 
     cmds.upload()
 
-if __name__ == "__main__":
-    HOST, PORT = "", 9999
-
-    # Create the server, binding to localhost on port 9999
-    server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
-
-    # Activate the server; this will keep running until you
-    # interrupt the program with Ctrl-C
-    server.serve_forever()
-
+start_location = sys.argv[1]
+end_location = sys.argv[2]
+directions = get_directions(start_location, end_location)
+create_mission(directions)
