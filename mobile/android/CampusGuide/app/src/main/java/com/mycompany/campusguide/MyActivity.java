@@ -24,30 +24,33 @@ import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListe
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.DirectionsApi;
-import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.android.PolyUtil;
-import com.google.maps.model.DirectionsLeg;
 import com.google.maps.model.DirectionsResult;
-import com.google.maps.model.DirectionsRoute;
 import com.google.maps.model.DirectionsStep;
-import com.google.maps.model.GeocodedWaypoint;
 import com.google.maps.model.TravelMode;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.apis.MissionApi;
 import com.o3dr.android.client.interfaces.DroneListener;
 import com.o3dr.android.client.interfaces.TowerListener;
 import com.o3dr.services.android.lib.coordinate.LatLong;
+import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.connection.ConnectionParameter;
 import com.o3dr.services.android.lib.drone.connection.ConnectionType;
+import com.o3dr.services.android.lib.drone.mission.Mission;
+import com.o3dr.services.android.lib.drone.mission.item.command.Takeoff;
+import com.o3dr.services.android.lib.drone.mission.item.spatial.Land;
+import com.o3dr.services.android.lib.drone.mission.item.spatial.Waypoint;
 import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.drone.property.Type;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 public class MyActivity extends AppCompatActivity
@@ -175,7 +178,7 @@ public class MyActivity extends AppCompatActivity
         Bundle extraParams = new Bundle();
         extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, 14550); // Set default port to 14550
 
-        ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
+        ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams);
         this.drone.connect(connectionParams);
     }
 
@@ -191,6 +194,13 @@ public class MyActivity extends AppCompatActivity
 
     /** Called when the user clicks the Request button */
     public void sendRequest(View view) {
+        while (!this.drone.isConnected()) {
+            Bundle extraParams = new Bundle();
+            extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, 14550); // Set default port to 14550
+
+            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams);
+            this.drone.connect(connectionParams);
+        }
         String location = ""; // String to store phone's coordinates
         // Check for permission to access device's fine location
         int permissionCheck = ContextCompat.checkSelfPermission(this, "android.permission.ACCESS_FINE_LOCATION");
@@ -207,22 +217,13 @@ public class MyActivity extends AppCompatActivity
                 System.out.println(location);
             }
             LatLong dronePosition = getPosition();
+            while (dronePosition == null) {
+                dronePosition = getPosition();
+            }
             String droneLocation = dronePosition.getLatitude() + ", " + dronePosition.getLongitude();
             System.out.println("Drone position: " + droneLocation);
-            try {
-                DirectionsResult result = DirectionsApi.getDirections(context, "Aldrich Hall, Irvine, CA", "Ayala Science Library, Irvine, CA").mode(TravelMode.WALKING).await();
-                com.google.maps.model.LatLng startLocation = result.routes[0].legs[0].steps[0].startLocation;
-                System.out.println(startLocation.lat + ", " + startLocation.lng);
-                for (DirectionsStep d : result.routes[0].legs[0].steps) {
-                    for (LatLng point : PolyUtil.decode(d.polyline.getEncodedPath())) {
-                        System.out.println(point.latitude + ", " + point.longitude);
-                    }
-                    System.out.println(d.endLocation.lat + ", " + d.endLocation.lng);
-                }
-            }
-            catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
+            ArrayList<String> directions = getDirections("Aldrich Hall, Irvine, CA", "Ayala Science Library, Irvine, CA");
+            createMission(directions);
         }
         else {
             System.out.println("Permission denied");
@@ -235,11 +236,76 @@ public class MyActivity extends AppCompatActivity
 
     public LatLong getPosition() {
         Gps droneGps = drone.getAttribute(AttributeType.GPS);
+        while (!isValid()) {
+            droneGps = drone.getAttribute(AttributeType.GPS);
+        }
         return isValid() ? droneGps.getPosition() : null;
     }
 
     public boolean isValid() {
         Gps droneGps = drone.getAttribute(AttributeType.GPS);
         return droneGps != null && droneGps.isValid();
+    }
+
+    public ArrayList<String> getDirections(String startLocation, String endLocation) {
+        ArrayList<String> directions = new ArrayList<String>();
+        try {
+            DirectionsResult directionsResult = DirectionsApi.getDirections(context, startLocation,
+                    endLocation).mode(TravelMode.WALKING).await();
+            com.google.maps.model.LatLng start = directionsResult.routes[0].legs[0].steps[0]
+                    .startLocation;
+            directions.add(start.lat + ", " + start.lng);
+            for (DirectionsStep step : directionsResult.routes[0].legs[0].steps) {
+                for (LatLng point : PolyUtil.decode(step.polyline.getEncodedPath())) {
+                    directions.add(point.latitude + ", " + point.longitude);
+                }
+                com.google.maps.model.LatLng end = step.endLocation;
+                directions.add(end.lat + ", " + end.lng);
+            }
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        for (String x : directions) {
+            System.out.println(x);
+        }
+        return directions;
+    }
+
+    public void createMission(ArrayList<String> directions) {
+        System.out.println("Creating mission");
+        // Get the mission property from the drone
+        Mission mission = this.drone.getAttribute(AttributeType.MISSION);
+
+        // Clear the mission first to remove old waypoints
+        mission.clear();
+
+        // Add Takeoff object with altitude of 5m
+        Takeoff takeoff = new Takeoff();
+        takeoff.setTakeoffAltitude(5.0);
+        mission.addMissionItem(takeoff);
+
+        // Add each coordinate in directions as a Waypoint object with altitude of 5m
+        for (String point : directions) {
+            double lat = Double.parseDouble(point.split(", ")[0]);
+            double lon = Double.parseDouble(point.split(", ")[1]);
+
+            LatLongAlt coordinate = new LatLongAlt(lat, lon, 5.0);
+            Waypoint waypoint = new Waypoint();
+            waypoint.setCoordinate(coordinate);
+            mission.addMissionItem(waypoint);
+        }
+
+        // Add Land object
+        Land land = new Land();
+        mission.addMissionItem(land);
+
+        // Upload the mission to the drone
+        MissionApi missionApi = MissionApi.getApi(this.drone);
+        missionApi.setMission(mission, true);
+        System.out.println("Done");
+        Mission received = this.drone.getAttribute(AttributeType.MISSION);
+        missionApi.loadWaypoints();
+        System.out.println(received.getMissionItems().get(0).toString());
     }
 }

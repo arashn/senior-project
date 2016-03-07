@@ -4,6 +4,7 @@
 # Directions API to obtain directions from the start
 # location to the end location, and uses the points
 # received as waypoints in the mission.
+import sys
 import googlemaps
 from polyline.codec import PolylineCodec
 from dronekit import connect, VehicleMode, Command
