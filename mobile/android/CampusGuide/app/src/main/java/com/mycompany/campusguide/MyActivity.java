@@ -210,11 +210,14 @@ public class MyActivity extends AppCompatActivity
             String droneLocation = dronePosition.getLatitude() + ", " + dronePosition.getLongitude();
             System.out.println("Drone position: " + droneLocation);
             try {
-                DirectionsResult result = DirectionsApi.getDirections(context, droneLocation, location).mode(TravelMode.WALKING).await();
+                DirectionsResult result = DirectionsApi.getDirections(context, "Aldrich Hall, Irvine, CA", "Ayala Science Library, Irvine, CA").mode(TravelMode.WALKING).await();
+                com.google.maps.model.LatLng startLocation = result.routes[0].legs[0].steps[0].startLocation;
+                System.out.println(startLocation.lat + ", " + startLocation.lng);
                 for (DirectionsStep d : result.routes[0].legs[0].steps) {
                     for (LatLng point : PolyUtil.decode(d.polyline.getEncodedPath())) {
                         System.out.println(point.latitude + ", " + point.longitude);
                     }
+                    System.out.println(d.endLocation.lat + ", " + d.endLocation.lng);
                 }
             }
             catch (Exception e) {
