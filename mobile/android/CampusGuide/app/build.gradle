@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.mycompany.campusguide"
-        minSdkVersion 9
+        minSdkVersion 14
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -24,8 +24,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.android.support:design:23.1.1'
-}
-
-dependencies {
     compile 'com.google.android.gms:play-services:8.4.0'
+    compile 'com.o3dr.android:dronekit-android:2.3.+'
+    compile 'com.google.maps:google-maps-services:0.1.11'
+    compile 'com.google.maps.android:android-maps-utils:0.4+'
 }

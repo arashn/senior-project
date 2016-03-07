@@ -1,14 +1,10 @@
 package com.mycompany.campusguide;
 
-import android.bluetooth.BluetoothAdapter;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
@@ -18,6 +14,7 @@ import android.telecom.ConnectionRequest;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -25,6 +22,28 @@ import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.DirectionsApi;
+import com.google.maps.DirectionsApiRequest;
+import com.google.maps.GeoApiContext;
+import com.google.maps.android.PolyUtil;
+import com.google.maps.model.DirectionsLeg;
+import com.google.maps.model.DirectionsResult;
+import com.google.maps.model.DirectionsRoute;
+import com.google.maps.model.DirectionsStep;
+import com.google.maps.model.GeocodedWaypoint;
+import com.google.maps.model.TravelMode;
+import com.o3dr.android.client.ControlTower;
+import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.interfaces.DroneListener;
+import com.o3dr.android.client.interfaces.TowerListener;
+import com.o3dr.services.android.lib.coordinate.LatLong;
+import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
+import com.o3dr.services.android.lib.drone.attribute.AttributeType;
+import com.o3dr.services.android.lib.drone.connection.ConnectionParameter;
+import com.o3dr.services.android.lib.drone.connection.ConnectionType;
+import com.o3dr.services.android.lib.drone.property.Gps;
+import com.o3dr.services.android.lib.drone.property.Type;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,27 +51,52 @@ import java.net.Socket;
 import java.util.concurrent.ExecutionException;
 
 public class MyActivity extends AppCompatActivity
-        implements ConnectionCallbacks, OnConnectionFailedListener {
+        implements ConnectionCallbacks, OnConnectionFailedListener, DroneListener, TowerListener {
     private GoogleApiClient mGoogleApiClient;
-    private BluetoothAdapter mBluetoothAdapter;
-    public static final int REQUEST_ENABLE_BT = 2;
+    private GeoApiContext context;
 
-    // Create a BroadcastReceiver for ACTION_STATE_CHANGED
-    // Turns Bluetooth on if it was turned off
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if(BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
-                final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
-                if (state == BluetoothAdapter.STATE_OFF) {
-                    System.out.println("Bluetooth was turned off. Turning on...");
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-                }
-            }
+    private ControlTower controlTower;
+    private Drone drone;
+    private int droneType = Type.TYPE_UNKNOWN;
+    private final Handler handler = new Handler();
+
+    // 3DR Services Listener
+    @Override
+    public void onTowerConnected() {
+        this.controlTower.registerDrone(this.drone, this.handler);
+        this.drone.registerDroneListener(this);
+    }
+
+    @Override
+    public void onTowerDisconnected() {
+
+    }
+
+    @Override
+    public void onDroneEvent(String event, Bundle extras) {
+        switch (event) {
+            case AttributeEvent.STATE_CONNECTED:
+                alertUser("Drone Connected");
+                break;
+
+            case AttributeEvent.STATE_DISCONNECTED:
+                alertUser("Drone Disconnected");
+                break;
+
+            default:
+                break;
         }
-    };
+    }
+
+    @Override
+    public void onDroneConnectionFailed(com.o3dr.services.android.lib.drone.connection.ConnectionResult result) {
+
+    }
+
+    @Override
+    public void onDroneServiceInterrupted(String errorMsg) {
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,20 +114,6 @@ public class MyActivity extends AppCompatActivity
             }
         });
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            // Device does not support Bluetooth
-            System.out.println("Device does not support Bluetooth");
-        }
-        else if (!mBluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        }
-
-        // Register the BroadcastReceiver
-        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-        registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
-
         // Create an instance of GoogleAPIClient
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -92,12 +122,12 @@ public class MyActivity extends AppCompatActivity
                     .addApi(LocationServices.API)
                     .build();
         }
-    }
 
-    public void onDestroy() {
-        // Unregister BroadcastReceiver
-        unregisterReceiver(mReceiver);
-        super.onDestroy();
+        context = new GeoApiContext().setApiKey("AIzaSyBj8RNUHUSuk78N2Jim9yrMAKjWvh6gc_g");
+
+        // Initialize the service manager
+        this.controlTower = new ControlTower(getApplicationContext());
+        this.drone = new Drone(getApplicationContext());
     }
 
     @Override
@@ -140,17 +170,28 @@ public class MyActivity extends AppCompatActivity
     protected void onStart() {
         mGoogleApiClient.connect();
         super.onStart();
+        this.controlTower.connect(this);
+
+        Bundle extraParams = new Bundle();
+        extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, 14550); // Set default port to 14550
+
+        ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
+        this.drone.connect(connectionParams);
     }
 
     protected void onStop() {
         mGoogleApiClient.disconnect();
         super.onStop();
+        if (this.drone.isConnected()) {
+            this.drone.disconnect();
+        }
+        this.controlTower.unregisterDrone(this.drone);
+        this.controlTower.disconnect();
     }
 
     /** Called when the user clicks the Request button */
     public void sendRequest(View view) {
         String location = ""; // String to store phone's coordinates
-        String userData = "";
         // Check for permission to access device's fine location
         int permissionCheck = ContextCompat.checkSelfPermission(this, "android.permission.ACCESS_FINE_LOCATION");
         if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
@@ -165,33 +206,37 @@ public class MyActivity extends AppCompatActivity
                 location = mLatitudeText + ", " + mLongitudeText;
                 System.out.println(location);
             }
+            LatLong dronePosition = getPosition();
+            String droneLocation = dronePosition.getLatitude() + ", " + dronePosition.getLongitude();
+            System.out.println("Drone position: " + droneLocation);
+            try {
+                DirectionsResult result = DirectionsApi.getDirections(context, droneLocation, location).mode(TravelMode.WALKING).await();
+                for (DirectionsStep d : result.routes[0].legs[0].steps) {
+                    for (LatLng point : PolyUtil.decode(d.polyline.getEncodedPath())) {
+                        System.out.println(point.latitude + ", " + point.longitude);
+                    }
+                }
+            }
+            catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
         }
         else {
             System.out.println("Permission denied");
         }
+    }
 
-        // Get the Bluetooth address for this device
-        String btAddr = mBluetoothAdapter.getAddress();
-        System.out.println(btAddr);
-        userData = btAddr + ";" + location;
+    protected void alertUser(String message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+    }
 
-        // Create a worker thread to create a socket connected to the server
-        // Get the socket's output stream, and write the phone's Blueooth address
-        // and the current location, separated by a semicolon
-        try {
-            AsyncTask<Void, Void, Socket> socketConnection = new ServerConnection().execute();
-            Socket sock = socketConnection.get();
-            OutputStream socketOutput = sock.getOutputStream();
-            socketOutput.write(userData.getBytes());
-        }
-        catch (IOException e) {
-            System.err.println("An error occurred");
-        }
-        catch (InterruptedException e) {
-            System.err.println(e.getMessage());
-        }
-        catch (ExecutionException e) {
-            System.err.println(e.getMessage());
-        }
+    public LatLong getPosition() {
+        Gps droneGps = drone.getAttribute(AttributeType.GPS);
+        return isValid() ? droneGps.getPosition() : null;
+    }
+
+    public boolean isValid() {
+        Gps droneGps = drone.getAttribute(AttributeType.GPS);
+        return droneGps != null && droneGps.isValid();
     }
 }
