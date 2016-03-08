@@ -79,11 +79,19 @@ public class MyActivity extends AppCompatActivity
     public void onDroneEvent(String event, Bundle extras) {
         switch (event) {
             case AttributeEvent.STATE_CONNECTED:
-                alertUser("Drone Connected");
+                //alertUser("Drone Connected");
                 break;
 
             case AttributeEvent.STATE_DISCONNECTED:
-                alertUser("Drone Disconnected");
+                //alertUser("Drone Disconnected");
+                break;
+
+            case AttributeEvent.MISSION_RECEIVED:
+                alertUser("Mission received");
+                break;
+
+            case AttributeEvent.MISSION_SENT:
+                alertUser("Mission sent");
                 break;
 
             default:
@@ -176,9 +184,9 @@ public class MyActivity extends AppCompatActivity
         this.controlTower.connect(this);
 
         Bundle extraParams = new Bundle();
-        extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, 14550); // Set default port to 14550
+        extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default port to 14550
 
-        ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams);
+        ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams);
         this.drone.connect(connectionParams);
     }
 
@@ -196,9 +204,9 @@ public class MyActivity extends AppCompatActivity
     public void sendRequest(View view) {
         while (!this.drone.isConnected()) {
             Bundle extraParams = new Bundle();
-            extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, 14550); // Set default port to 14550
+            extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default port to 14550
 
-            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams);
+            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams);
             this.drone.connect(connectionParams);
         }
         String location = ""; // String to store phone's coordinates
@@ -274,6 +282,8 @@ public class MyActivity extends AppCompatActivity
 
     public void createMission(ArrayList<String> directions) {
         System.out.println("Creating mission");
+        MissionApi missionApi = MissionApi.getApi(this.drone);
+        //missionApi.loadWaypoints();
         // Get the mission property from the drone
         Mission mission = this.drone.getAttribute(AttributeType.MISSION);
 
@@ -301,11 +311,10 @@ public class MyActivity extends AppCompatActivity
         mission.addMissionItem(land);
 
         // Upload the mission to the drone
-        MissionApi missionApi = MissionApi.getApi(this.drone);
         missionApi.setMission(mission, true);
         System.out.println("Done");
-        Mission received = this.drone.getAttribute(AttributeType.MISSION);
-        missionApi.loadWaypoints();
-        System.out.println(received.getMissionItems().get(0).toString());
+        //Mission received = this.drone.getAttribute(AttributeType.MISSION);
+        //missionApi.loadWaypoints();
+        //System.out.println(received.getMissionItems().get(0).toString());
     }
 }
