@@ -1,4 +1,5 @@
 import SocketServer
+import time
 import googlemaps
 from polyline.codec import PolylineCodec
 from dronekit import connect, VehicleMode, Command
@@ -25,6 +26,7 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
             drone_location = str(vehicle.location.global_relative_frame.lat) + "," + str(vehicle.location.global_relative_frame.lon)
             directions = get_directions(drone_location, drone_location, waypoints=[user_location, destination])
             create_mission(directions)
+#            start_mission()
             print "Ready to fly"
             self.request.sendall("guideOK")
         elif locations[0] == "land":
@@ -89,7 +91,7 @@ def create_mission(directions):
 
     # Add waypoints for the path from the user to the destination
     # Don't add the last waypoint to avoid getting too close to any buildings
-    for point in directions[1][:-1]:
+    for point in directions[1][:-3]:
         lat = float(point[0])
         lon = float(point[1])
 
