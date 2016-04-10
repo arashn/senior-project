@@ -272,10 +272,7 @@ public class DroneControlActivity extends AppCompatActivity
             vehicleApi = null;
             controlApi = null;
         } else {
-            Bundle extraParams = new Bundle();
-            extraParams.putInt(ConnectionType.EXTRA_TCP_SERVER_PORT, 14550); // Set default port to 14550
-
-            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
+            ConnectionParameter connectionParams = ConnectionParameter.newUdpConnection(14550);
             this.drone.connect(connectionParams);
             vehicleApi = VehicleApi.getApi(this.drone);
             controlApi = ControlApi.getApi(this.drone);
