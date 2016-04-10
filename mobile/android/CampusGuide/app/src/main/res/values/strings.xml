@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Campus Guide</string>
-    <string name="button_request">Request</string>
     <string name="action_settings">Settings</string>
+    <string name="destination_string">Enter destination</string>
+    <string name="button_request">Request</string>
+    <string name="title_activity_drone_control">Campus Guide</string>
 </resources>
