@@ -32,25 +32,25 @@
         android:layout_width="150dp"
         android:layout_height="wrap_content"
         android:layout_below="@+id/btnConnect"
-        android:text="TAKE OFF"
-        android:id="@+id/btnTakeOff"
+        android:text="START"
+        android:id="@+id/btnStartMission"
         android:enabled="false"
-        android:onClick="onTakeOffButtonTap" />
+        android:onClick="onStartButtonTap" />
 
     <Button
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:layout_below="@+id/btnArmTakeOff"
-        android:layout_toRightOf="@+id/btnTakeOff"
-        android:text="FLY TO ME"
-        android:id="@+id/btnFlyToMe"
+        android:layout_toRightOf="@+id/btnStartMission"
+        android:text="LAND"
+        android:id="@+id/btnLand"
         android:enabled="false"
-        android:onClick="onFlyToMeButtonTap" />
+        android:onClick="onLandButtonTap" />
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/btnTakeOff"
+        android:layout_below="@+id/btnStartMission"
         android:text="RETURN TO LAUNCH"
         android:id="@+id/btnRTL"
         android:enabled="false"
