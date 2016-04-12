@@ -249,7 +249,7 @@ public class MainActivity extends AppCompatActivity
 
     protected void updateArmButton() {
         State vehicleState = this.drone.getAttribute(AttributeType.STATE);
-        Button armButton = (Button) findViewById(R.id.btnArmTakeOff);
+        Button armButton = (Button) findViewById(R.id.btnArm);
 
         if (this.drone.isConnected()) {
             armButton.setEnabled(true);

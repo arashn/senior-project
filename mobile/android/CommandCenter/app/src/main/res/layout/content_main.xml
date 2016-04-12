@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_toRightOf="@+id/btnConnect"
         android:text="ARM"
-        android:id="@+id/btnArmTakeOff"
+        android:id="@+id/btnArm"
         android:enabled="false"
         android:onClick="onArmButtonTap" />
 
@@ -40,7 +40,7 @@
     <Button
         android:layout_width="120dp"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/btnArmTakeOff"
+        android:layout_below="@+id/btnArm"
         android:layout_toRightOf="@+id/btnTakeOff"
         android:text="FLY TO ME"
         android:id="@+id/btnFlyToMe"
