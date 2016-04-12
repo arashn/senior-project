@@ -139,7 +139,7 @@ public class DroneControlActivity extends AppCompatActivity
                 break;
 
             case AttributeEvent.MISSION_SENT:
-                System.out.println("Mission sent");
+                alertUser("Mission sent");
                 break;
 
             case AttributeEvent.MISSION_RECEIVED:
@@ -148,7 +148,6 @@ public class DroneControlActivity extends AppCompatActivity
 
             case AttributeEvent.MISSION_UPDATED:
                 System.out.println("Mission updated");
-                //onMissionUpdate();
                 break;
 
             default:
@@ -491,10 +490,11 @@ public class DroneControlActivity extends AppCompatActivity
         System.out.println("Creating mission");
         //missionApi.loadWaypoints();
         // Get the mission property from the drone
-        mission = this.drone.getAttribute(AttributeType.MISSION);
+        //mission = this.drone.getAttribute(AttributeType.MISSION);
+        mission = new Mission();
 
         // Clear the mission first to remove old waypoints
-        mission.clear();
+        //mission.clear();
 
         // Add Takeoff object with altitude of 5m
         Takeoff takeoff = new Takeoff();
@@ -512,9 +512,9 @@ public class DroneControlActivity extends AppCompatActivity
             mission.addMissionItem(waypoint);
         }
 
-        // Add Land object
+        /*// Add Land object
         Land land = new Land();
-        mission.addMissionItem(land);
+        mission.addMissionItem(land);*/
 
         // Upload the mission to the drone
         missionApi.setMission(mission, true);
@@ -535,9 +535,5 @@ public class DroneControlActivity extends AppCompatActivity
         getDirections(droneLocation, "Ayala Science Library, Irvine, CA");
 
         createMission();
-    }
-
-    public void onMissionUpdate() {
-        missionApi.loadWaypoints();
     }
 }
