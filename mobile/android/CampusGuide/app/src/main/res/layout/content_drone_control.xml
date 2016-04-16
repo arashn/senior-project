@@ -12,45 +12,60 @@
     tools:context="com.mycompany.campusguide.DroneControlActivity"
     tools:showIn="@layout/activity_drone_control">
 
-    <Button
-        android:layout_width="150dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Connect"
-        android:id="@+id/btnConnect"
-        android:onClick="onBtnConnectTap" />
+        android:orientation="horizontal"
+        android:id="@+id/btnRow1">
 
-    <Button
-        android:layout_width="120dp"
-        android:layout_height="wrap_content"
-        android:layout_toRightOf="@+id/btnConnect"
-        android:text="ARM"
-        android:id="@+id/btnArm"
-        android:enabled="false"
-        android:onClick="onArmButtonTap" />
+        <Button
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Connect"
+            android:id="@+id/btnConnect"
+            android:onClick="onBtnConnectTap" />
 
-    <Button
-        android:layout_width="150dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/btnConnect"
-        android:text="START"
-        android:id="@+id/btnStartMission"
-        android:enabled="false"
-        android:onClick="onStartButtonTap" />
+        <Button
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="ARM"
+            android:id="@+id/btnArm"
+            android:enabled="false"
+            android:onClick="onArmButtonTap" />
+    </LinearLayout>
 
-    <Button
-        android:layout_width="120dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/btnArm"
-        android:layout_toRightOf="@+id/btnStartMission"
-        android:text="LAND"
-        android:id="@+id/btnLand"
-        android:enabled="false"
-        android:onClick="onLandButtonTap" />
+        android:layout_below="@+id/btnRow1"
+        android:orientation="horizontal"
+        android:id="@+id/btnRow2">
+
+        <Button
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="START"
+            android:id="@+id/btnStartMission"
+            android:enabled="false"
+            android:onClick="onStartButtonTap" />
+
+        <Button
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="LAND"
+            android:id="@+id/btnLand"
+            android:enabled="false"
+            android:onClick="onLandButtonTap" />
+    </LinearLayout>
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/btnStartMission"
+        android:layout_below="@+id/btnRow2"
         android:text="RETURN TO LAUNCH"
         android:id="@+id/btnRTL"
         android:enabled="false"

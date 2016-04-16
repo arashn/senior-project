@@ -33,7 +33,6 @@ import com.google.maps.model.DirectionsStep;
 import com.google.maps.model.TravelMode;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
-import com.o3dr.android.client.apis.ControlApi;
 import com.o3dr.android.client.apis.MissionApi;
 import com.o3dr.android.client.apis.VehicleApi;
 import com.o3dr.android.client.interfaces.DroneListener;
@@ -74,7 +73,6 @@ public class DroneControlActivity extends AppCompatActivity
     Spinner modeSelector;
 
     private VehicleApi vehicleApi;
-    private ControlApi controlApi;
     private MissionApi missionApi;
     private SimpleCommandListener commandListener;
 
@@ -115,6 +113,7 @@ public class DroneControlActivity extends AppCompatActivity
                 updateArmButton();
                 updateConnectedButton(this.drone.isConnected());
                 updateStartButton();
+                updateButtons();
                 break;
 
             case AttributeEvent.STATE_VEHICLE_MODE:
@@ -292,17 +291,31 @@ public class DroneControlActivity extends AppCompatActivity
         }
     }
 
+    protected void updateButtons() {
+        State vehicleState = this.drone.getAttribute(AttributeType.STATE);
+        VehicleMode vehicleMode = vehicleState.getVehicleMode();
+
+        Button landButton = (Button) findViewById(R.id.btnLand);
+        Button returnToLaunchButton = (Button) findViewById(R.id.btnRTL);
+
+        if (vehicleMode == VehicleMode.COPTER_AUTO && vehicleState.isFlying()) {
+            landButton.setEnabled(true);
+            returnToLaunchButton.setEnabled(true);
+        } else {
+            landButton.setEnabled(false);
+            returnToLaunchButton.setEnabled(false);
+        }
+    }
+
     public void onBtnConnectTap(View view) {
         if (this.drone.isConnected()) {
             this.drone.disconnect();
             vehicleApi = null;
-            controlApi = null;
             missionApi = null;
         } else {
             ConnectionParameter connectionParams = ConnectionParameter.newUdpConnection(14550);
             this.drone.connect(connectionParams);
             vehicleApi = VehicleApi.getApi(this.drone);
-            controlApi = ControlApi.getApi(this.drone);
             missionApi = MissionApi.getApi(this.drone);
         }
     }
@@ -373,17 +386,6 @@ public class DroneControlActivity extends AppCompatActivity
         VehicleMode vehicleMode = vehicleState.getVehicleMode();
         ArrayAdapter arrayAdapter = (ArrayAdapter) this.modeSelector.getAdapter();
         this.modeSelector.setSelection(arrayAdapter.getPosition(vehicleMode));
-
-        Button landButton = (Button) findViewById(R.id.btnLand);
-        Button returnToLaunchButton = (Button) findViewById(R.id.btnRTL);
-
-        if (vehicleMode == VehicleMode.COPTER_AUTO) {
-            landButton.setEnabled(true);
-            returnToLaunchButton.setEnabled(true);
-        } else {
-            landButton.setEnabled(false);
-            returnToLaunchButton.setEnabled(false);
-        }
     }
 
     protected void updateAltitude() {
@@ -512,9 +514,10 @@ public class DroneControlActivity extends AppCompatActivity
             mission.addMissionItem(waypoint);
         }
 
-        /*// Add Land object
+        // Add Land object
         Land land = new Land();
-        mission.addMissionItem(land);*/
+        land.setCoordinate(new LatLongAlt(0.0, 0.0, 0.0));
+        mission.addMissionItem(land);
 
         // Upload the mission to the drone
         missionApi.setMission(mission, true);
