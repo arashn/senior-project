@@ -28,6 +28,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.DirectionsApi;
 import com.google.maps.GeoApiContext;
 import com.google.maps.android.PolyUtil;
+import com.google.maps.model.DirectionsLeg;
 import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.DirectionsStep;
 import com.google.maps.model.TravelMode;
@@ -76,7 +77,9 @@ public class DroneControlActivity extends AppCompatActivity
     private MissionApi missionApi;
     private SimpleCommandListener commandListener;
 
+    private String destination;
     private ArrayList<String> directions;
+    private ArrayList<ArrayList<String>> trip;
     private Mission mission;
 
     // 3DR Services Listener
@@ -173,6 +176,9 @@ public class DroneControlActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        Intent intent = getIntent();
+        destination = intent.getStringExtra(MainActivity.EXTRA_DESTINATION);
 
         // Initialize the service manager
         this.controlTower = new ControlTower(getApplicationContext());
@@ -313,7 +319,7 @@ public class DroneControlActivity extends AppCompatActivity
             vehicleApi = null;
             missionApi = null;
         } else {
-            ConnectionParameter connectionParams = ConnectionParameter.newTcpConnection("169.234.9.219");
+            ConnectionParameter connectionParams = ConnectionParameter.newTcpConnection("192.168.1.108");
             this.drone.connect(connectionParams);
             vehicleApi = VehicleApi.getApi(this.drone);
             missionApi = MissionApi.getApi(this.drone);
@@ -472,7 +478,32 @@ public class DroneControlActivity extends AppCompatActivity
         return directions;
     }
 
-    public void createMission() {
+    public void createTrip(String droneLocation, String deviceLocation, String destination) {
+        trip = new ArrayList<ArrayList<String>>();
+        try {
+            DirectionsResult directionsResult = DirectionsApi.getDirections(context, droneLocation,
+                    droneLocation).mode(TravelMode.WALKING).waypoints(deviceLocation, destination)
+                    .await();
+
+            ArrayList<String> sLeg;
+            for (DirectionsLeg leg : directionsResult.routes[0].legs) {
+                sLeg = new ArrayList<String>();
+                for (DirectionsStep step : leg.steps) {
+                    for (LatLng point : PolyUtil.decode(step.polyline.getEncodedPath())) {
+                        sLeg.add(point.latitude + ", " + point.longitude);
+                    }
+                    com.google.maps.model.LatLng end = step.endLocation;
+                    sLeg.add(end.lat + ", " + end.lng);
+                }
+                trip.add(sLeg);
+            }
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    /*public void createMission() {
         System.out.println("Creating mission");
 
         // Create a new mission
@@ -502,6 +533,50 @@ public class DroneControlActivity extends AppCompatActivity
         // Upload the mission to the drone
         missionApi.setMission(mission, true);
         System.out.println("Done");
+    }*/
+
+    public void createMission() {
+        System.out.println("Creating mission");
+
+        // Create a new mission
+        mission = new Mission();
+
+        // Add Takeoff object with altitude of 5m
+        Takeoff takeoff = new Takeoff();
+        takeoff.setTakeoffAltitude(5.0);
+        mission.addMissionItem(takeoff);
+
+        // Add each coordinate in trip as a Waypoint object with altitude of 5m
+        // Add an extra Waypoint object at the end of each leg with coordinates 0, 0, 5
+        // and delay of 10. This Waypoint object serves as a loiter waypoint with a loiter
+        // time of 10 seconds, at the current altitude.
+        for (ArrayList<String> leg : trip) {
+            for (String point : leg) {
+                double lat = Double.parseDouble(point.split(", ")[0]);
+                double lon = Double.parseDouble(point.split(", ")[1]);
+
+                LatLongAlt coordinate = new LatLongAlt(lat, lon, 5.0);
+                Waypoint waypoint = new Waypoint();
+                waypoint.setCoordinate(coordinate);
+                mission.addMissionItem(waypoint);
+            }
+
+            // Add extra Waypoint object representing a loiter waypoint
+            LatLongAlt coordinate = new LatLongAlt(0.0, 0.0, 5.0);
+            Waypoint waypoint = new Waypoint();
+            waypoint.setCoordinate(coordinate);
+            waypoint.setDelay(10.0);
+            mission.addMissionItem(waypoint);
+        }
+
+        // Add Land object
+        Land land = new Land();
+        land.setCoordinate(new LatLongAlt(0.0, 0.0, 0.0));
+        mission.addMissionItem(land);
+
+        // Upload the mission to the drone
+        missionApi.setMission(mission, true);
+        System.out.println("Done");
     }
 
     public void prepareDrone() {
@@ -515,7 +590,7 @@ public class DroneControlActivity extends AppCompatActivity
         }
         String droneLocation = dronePosition.getLatitude() + ", " + dronePosition.getLongitude();
 
-        getDirections(droneLocation, deviceLocation);
+        createTrip(droneLocation, deviceLocation, destination);
 
         createMission();
     }
