@@ -313,7 +313,7 @@ public class DroneControlActivity extends AppCompatActivity
             vehicleApi = null;
             missionApi = null;
         } else {
-            ConnectionParameter connectionParams = ConnectionParameter.newUdpConnection(14550);
+            ConnectionParameter connectionParams = ConnectionParameter.newTcpConnection("169.234.9.219");
             this.drone.connect(connectionParams);
             vehicleApi = VehicleApi.getApi(this.drone);
             missionApi = MissionApi.getApi(this.drone);
@@ -334,19 +334,6 @@ public class DroneControlActivity extends AppCompatActivity
     }
 
     public void onStartButtonTap(View view) {
-        /*State vehicleState = this.drone.getAttribute(AttributeType.STATE);
-
-        if (vehicleState.isFlying()) {
-            // Land
-            vehicleApi.setVehicleMode(VehicleMode.COPTER_LAND);
-            alertUser("Landing");
-        } else if (vehicleState.isArmed()) {
-            // Take off
-            controlApi.takeoff(10, commandListener); // Default take off altitude is 10m
-            alertUser("Taking off");
-        }*/
-
-        //startMission();
         missionApi.startMission(true, false, commandListener);
     }
 
@@ -482,21 +469,14 @@ public class DroneControlActivity extends AppCompatActivity
         catch (Exception e) {
             System.out.println(e.getMessage());
         }
-        /*for (String x : directions) {
-            System.out.println(x);
-        }*/
         return directions;
     }
 
     public void createMission() {
         System.out.println("Creating mission");
-        //missionApi.loadWaypoints();
-        // Get the mission property from the drone
-        //mission = this.drone.getAttribute(AttributeType.MISSION);
-        mission = new Mission();
 
-        // Clear the mission first to remove old waypoints
-        //mission.clear();
+        // Create a new mission
+        mission = new Mission();
 
         // Add Takeoff object with altitude of 5m
         Takeoff takeoff = new Takeoff();
@@ -522,9 +502,6 @@ public class DroneControlActivity extends AppCompatActivity
         // Upload the mission to the drone
         missionApi.setMission(mission, true);
         System.out.println("Done");
-        //Mission received = this.drone.getAttribute(AttributeType.MISSION);
-        //missionApi.loadWaypoints();
-        //System.out.println(received.getMissionItems().get(0).toString());
     }
 
     public void prepareDrone() {
@@ -533,9 +510,12 @@ public class DroneControlActivity extends AppCompatActivity
 
         // Get position of drone
         LatLong dronePosition = getPosition();
+        while (dronePosition == null) {
+            dronePosition = getPosition();
+        }
         String droneLocation = dronePosition.getLatitude() + ", " + dronePosition.getLongitude();
 
-        getDirections(droneLocation, "Ayala Science Library, Irvine, CA");
+        getDirections(droneLocation, deviceLocation);
 
         createMission();
     }
