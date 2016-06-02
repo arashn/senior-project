@@ -3,6 +3,7 @@ package com.mycompany.campusguide;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.ContextCompat;
@@ -58,10 +59,13 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 
 public class DroneControlActivity extends AppCompatActivity
         implements DroneListener, TowerListener, ConnectionCallbacks, OnConnectionFailedListener {
+
+    private String droneIPAddress;
 
     private GoogleApiClient mGoogleApiClient;
     private GeoApiContext context;
@@ -319,10 +323,20 @@ public class DroneControlActivity extends AppCompatActivity
             vehicleApi = null;
             missionApi = null;
         } else {
-            ConnectionParameter connectionParams = ConnectionParameter.newTcpConnection("192.168.1.108");
-            this.drone.connect(connectionParams);
-            vehicleApi = VehicleApi.getApi(this.drone);
-            missionApi = MissionApi.getApi(this.drone);
+            try {
+                AsyncTask<String, Void, String> getDroneIP = new GetDroneIPTask().execute(getDeviceLocation());
+                droneIPAddress = getDroneIP.get();
+                ConnectionParameter connectionParams = ConnectionParameter.newTcpConnection(droneIPAddress);
+                this.drone.connect(connectionParams);
+                vehicleApi = VehicleApi.getApi(this.drone);
+                missionApi = MissionApi.getApi(this.drone);
+            }
+            catch (InterruptedException e) {
+                System.err.println(e.getMessage());
+            }
+            catch (ExecutionException e) {
+                System.err.println(e.getMessage());
+            }
         }
     }
 
