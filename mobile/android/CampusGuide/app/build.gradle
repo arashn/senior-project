@@ -27,5 +27,4 @@ dependencies {
     compile 'com.google.android.gms:play-services-location:8.4.0'
     compile 'com.o3dr.android:dronekit-android:2.9.0'
     compile 'com.google.maps:google-maps-services:0.1.12'
-    compile 'com.google.maps.android:android-maps-utils:0.4.3'
 }
